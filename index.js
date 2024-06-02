@@ -49,6 +49,12 @@ async function run() {
       }
     });
 
+    app.get('/users', async (req, res) => {
+      const result = await userCollcation.findOne(req.qurey);
+      console.log(result);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 

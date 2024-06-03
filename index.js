@@ -26,6 +26,7 @@ async function run() {
     // await client.connect();
     const MicroTask = client.db('MicroTaskDB');
     const userCollcation = MicroTask.collection('MicroUsers');
+    const tasksCollcation = MicroTask.collection('Tasks');
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -52,6 +53,19 @@ async function run() {
     app.get('/users', async (req, res) => {
       const result = await userCollcation.findOne(req.qurey);
       console.log(result);
+      res.send(result);
+    });
+
+    app.post('/alltasks', async (req, res) => {
+      const task = req.body;
+      const result = await tasksCollcation.insertOne(task);
+      res.send(result);
+    });
+
+    app.get('/my-tasks', async (req, res) => {
+      const creator = req.query?.creator_email;
+      const qurey = { creator_email: creator };
+      const result = await tasksCollcation.find(qurey).toArray();
       res.send(result);
     });
 

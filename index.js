@@ -1,6 +1,6 @@
 const express = require('express');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
@@ -26,6 +26,7 @@ async function run() {
     // await client.connect();
     const MicroTask = client.db('MicroTaskDB');
     const userCollcation = MicroTask.collection('MicroUsers');
+    const featureCollcation = MicroTask.collection('feature');
     const tasksCollcation = MicroTask.collection('Tasks');
 
     app.post('/jwt', async (req, res) => {
@@ -51,11 +52,12 @@ async function run() {
     });
 
     app.get('/users', async (req, res) => {
-      const result = await userCollcation.findOne(req.qurey);
-      console.log(result);
+      const email = req.query.email;
+      const qurey = { email: email };
+      const result = await userCollcation.findOne(qurey);
       res.send(result);
     });
-
+    //tasks creator section
     app.post('/alltasks', async (req, res) => {
       const task = req.body;
       const result = await tasksCollcation.insertOne(task);
@@ -63,9 +65,28 @@ async function run() {
     });
 
     app.get('/my-tasks', async (req, res) => {
-      const creator = req.query?.creator_email;
-      const qurey = { creator_email: creator };
+      const email = req.query.creator_email;
+      const qurey = { creator_email: email };
       const result = await tasksCollcation.find(qurey).toArray();
+      res.send(result);
+    });
+
+    app.get('/feature', async (req, res) => {
+      const result = await featureCollcation.find().toArray();
+
+      res.send(result);
+    });
+
+    app.delete('/tasks-delete/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await tasksCollcation.deleteOne(qurey);
+      res.send(result);
+    });
+
+    //----------- worker data api section ----------------
+    app.get('/tasks-list', async (req, res) => {
+      const result = await tasksCollcation.find().toArray();
       res.send(result);
     });
 

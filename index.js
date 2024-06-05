@@ -28,6 +28,7 @@ async function run() {
     const userCollcation = MicroTask.collection('MicroUsers');
     const featureCollcation = MicroTask.collection('feature');
     const tasksCollcation = MicroTask.collection('Tasks');
+    const submitCollcation = MicroTask.collection('Tasks_submit');
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
@@ -94,6 +95,19 @@ async function run() {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };
       const result = await tasksCollcation.findOne(qurey);
+      res.send(result);
+    });
+
+    app.post('/tasks-submit', async (req, res) => {
+      const submit = req.body;
+      const result = await submitCollcation.insertOne(submit);
+      res.send(result);
+    });
+
+    app.get('/my-submission', async (req, res) => {
+      const email = req.query?.worker_email;
+      const qurey = { worker_email: email };
+      const result = await submitCollcation.find(qurey).toArray();
       res.send(result);
     });
 

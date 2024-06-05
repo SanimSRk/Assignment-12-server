@@ -111,6 +111,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/worker-users', async (req, res) => {
+      const role = { role: 'worker' };
+      const result = await userCollcation.find(role).toArray();
+
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 

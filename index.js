@@ -118,6 +118,29 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/user-role/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+
+      const user = req.body;
+      const updateDec = {
+        $set: {
+          role: user.role,
+          coin: user.coin,
+        },
+      };
+
+      const result = await userCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
+    app.delete('/delete-user/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await userCollcation.deleteOne(qurey);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 

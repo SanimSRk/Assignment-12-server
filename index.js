@@ -141,6 +141,16 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/tasks-manages', async (req, res) => {
+      const result = await tasksCollcation.find().toArray();
+      res.send(result);
+    });
+    app.delete('/task-deletes/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await tasksCollcation.deleteOne(qurey);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 

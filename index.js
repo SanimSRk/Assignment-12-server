@@ -61,14 +61,27 @@ async function run() {
     //tasks creator section
     app.post('/alltasks', async (req, res) => {
       const task = req.body;
-      const result = await tasksCollcation.insertOne(task);
-      res.send(result);
+      const email = { email: task?.creator_email };
+
+      const user = await userCollcation.findOne(email);
+      const totalCoins = user?.coin;
+      const quantity = task?.task_quantity * task?.payable_amount;
+
+      if (totalCoins < quantity) {
+        return res.send({ message: 'notAvailable' });
+      } else {
+        const result = await tasksCollcation.insertOne(task);
+        res.send(result);
+      }
     });
 
     app.get('/my-tasks', async (req, res) => {
       const email = req.query.creator_email;
       const qurey = { creator_email: email };
-      const result = await tasksCollcation.find(qurey).toArray();
+      const result = await tasksCollcation
+        .find(qurey)
+        .sort({ completion_date: 1 })
+        .toArray();
       res.send(result);
     });
 

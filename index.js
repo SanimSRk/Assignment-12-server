@@ -85,6 +85,29 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/updateTasks/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await tasksCollcation.findOne(qurey);
+      res.send(result);
+    });
+
+    app.put('/tasks-updates/:id', async (req, res) => {
+      const id = req.params.id;
+      const update = req.body;
+      const qurey = { _id: new ObjectId(id) };
+      const updateDec = {
+        $set: {
+          task_title: update?.task_title,
+          task_detail: update?.task_detail,
+          submission_info: update?.submission_info,
+        },
+      };
+
+      const result = await tasksCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
       const result = await tasksCollcation.find().toArray();

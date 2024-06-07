@@ -172,6 +172,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/payment-history', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
       const result = await tasksCollcation.find().toArray();

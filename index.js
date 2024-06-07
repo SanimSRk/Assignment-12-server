@@ -3,6 +3,7 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRECT_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -29,7 +30,7 @@ async function run() {
     const featureCollcation = MicroTask.collection('feature');
     const tasksCollcation = MicroTask.collection('Tasks');
     const submitCollcation = MicroTask.collection('Tasks_submit');
-
+    const buyCartCollection = MicroTask.collection('buyCart');
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -70,6 +71,9 @@ async function run() {
       if (totalCoins < quantity) {
         return res.send({ message: 'notAvailable' });
       } else {
+        const decrease = await userCollcation.updateOne(email, {
+          $inc: { coin: -quantity },
+        });
         const result = await tasksCollcation.insertOne(task);
         res.send(result);
       }
@@ -91,6 +95,16 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/buyCart', async (req, res) => {
+      const result = await buyCartCollection.find().toArray();
+      res.send(result);
+    });
+    app.get('/buy-cartId/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await buyCartCollection.findOne(qurey);
+      res.send(result);
+    });
     app.delete('/tasks-delete/:id', async (req, res) => {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };

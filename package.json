@@ -5,7 +5,8 @@
     "express": "^4.19.2",
     "init": "^0.1.2",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.7.0"
+    "mongodb": "^6.7.0",
+    "stripe": "^15.10.0"
   },
   "name": "assignment-12-server",
   "version": "1.0.0",

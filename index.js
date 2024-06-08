@@ -181,8 +181,9 @@ async function run() {
     });
 
     app.get('/submit-reviews', async (req, res) => {
-      const qurey = { status: 'pending' };
-      const result = await submitCollcation.find(qurey).toArray();
+      const email = req.query.creator_email;
+      const qureys = { creator_email: email, status: 'pending' };
+      const result = await submitCollcation.find(qureys).toArray();
       res.send(result);
     });
 
@@ -246,7 +247,7 @@ async function run() {
       const result = await submitCollcation.find(qurey).toArray();
       res.send(result);
     });
-
+    //thsi is problem for us
     app.get('/worker-users', async (req, res) => {
       const role = { role: 'worker' };
       const result = await userCollcation.find(role).toArray();

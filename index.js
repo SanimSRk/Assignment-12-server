@@ -3,6 +3,7 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const { status } = require('init');
 const stripe = require('stripe')(process.env.STRIPE_SECRECT_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
@@ -176,6 +177,12 @@ async function run() {
       const email = req.query.email;
       const query = { email: email };
       const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get('/submit-reviews', async (req, res) => {
+      const qurey = { status: 'pending' };
+      const result = await submitCollcation.find(qurey).toArray();
       res.send(result);
     });
 

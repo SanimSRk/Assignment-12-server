@@ -186,6 +186,41 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/status-approve/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const updateDec = {
+        $set: {
+          status: 'approve',
+        },
+      };
+
+      const result = await submitCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
+    app.patch('/increase-userCoin', async (req, res) => {
+      const email = req.query.worker_email;
+      const amounts = parseFloat(req.body.amount);
+      const qurey = { email: email };
+      console.log(email, amounts);
+      const updateDec = {
+        $inc: { coin: +amounts },
+      };
+
+      const result = await userCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
+    app.patch('/reject-userTasks/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const updateDec = {
+        $set: { status: 'reject' },
+      };
+      const result = await submitCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
       const result = await tasksCollcation.find().toArray();

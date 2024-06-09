@@ -224,7 +224,9 @@ async function run() {
     });
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
-      const result = await tasksCollcation.find().toArray();
+      const result = await tasksCollcation
+        .find({ task_quantity: { $gt: 0 } })
+        .toArray();
       res.send(result);
     });
 
@@ -254,6 +256,34 @@ async function run() {
 
       res.send(result);
     });
+
+    app.get('/worker-allSubmicon', async (req, res) => {
+      const email = req.query.worker_email;
+      const qurey = { worker_email: email };
+      const workerSubmit = await submitCollcation.find(qurey).toArray();
+      res.send(workerSubmit);
+    });
+
+    app.get('/workers-amounts', async (req, res) => {
+      const email = req.query.worker_email;
+      const qureyAmounts = { worker_email: email, status: 'approve' };
+      const amounts = await submitCollcation.find(qureyAmounts).toArray();
+      res.send(amounts);
+    });
+
+    app.patch('/drcress-quantity/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const updateDec = {
+        $inc: {
+          task_quantity: -1,
+        },
+      };
+      const result = tasksCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
+    //------admim section crate api------------------
 
     app.patch('/user-role/:id', async (req, res) => {
       const id = req.params.id;
@@ -287,6 +317,11 @@ async function run() {
       const qurey = { _id: new ObjectId(id) };
       const result = await tasksCollcation.deleteOne(qurey);
       res.send(result);
+    });
+
+    app.get('/admin-status', async (req, res) => {
+      const tottalUers = await userCollcation.estimatedDocumentCount();
+      res.send({ tottalUers });
     });
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });

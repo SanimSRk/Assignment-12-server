@@ -3,7 +3,6 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const { status } = require('init');
 const stripe = require('stripe')(process.env.STRIPE_SECRECT_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
@@ -33,6 +32,7 @@ async function run() {
     const submitCollcation = MicroTask.collection('Tasks_submit');
     const buyCartCollection = MicroTask.collection('buyCart');
     const paymentCollection = MicroTask.collection('payments');
+    const withdrawCollection = MicroTask.collection('withdraw_request');
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -74,10 +74,13 @@ async function run() {
       if (totalCoins < quantity) {
         return res.send({ message: 'notAvailable' });
       } else {
-        const decrease = await userCollcation.updateOne(email, {
-          $inc: { coin: -quantity },
-        });
         const result = await tasksCollcation.insertOne(task);
+        if (result.insertedId) {
+          const decrease = await userCollcation.updateOne(email, {
+            $inc: { coin: -quantity },
+          });
+        }
+
         res.send(result);
       }
     });
@@ -204,7 +207,6 @@ async function run() {
       const email = req.query.worker_email;
       const amounts = parseFloat(req.body.amount);
       const qurey = { email: email };
-      console.log(email, amounts);
       const updateDec = {
         $inc: { coin: +amounts },
       };
@@ -222,6 +224,7 @@ async function run() {
       const result = await submitCollcation.updateOne(qurey, updateDec);
       res.send(result);
     });
+
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
       const result = await tasksCollcation
@@ -249,7 +252,7 @@ async function run() {
       const result = await submitCollcation.find(qurey).toArray();
       res.send(result);
     });
-    //thsi is problem for us
+
     app.get('/worker-users', async (req, res) => {
       const role = { role: 'worker' };
       const result = await userCollcation.find(role).toArray();
@@ -279,8 +282,39 @@ async function run() {
           task_quantity: -1,
         },
       };
-      const result = tasksCollcation.updateOne(qurey, updateDec);
+      const result = await tasksCollcation.updateOne(qurey, updateDec);
       res.send(result);
+    });
+
+    app.post('/withdraw-requests', async (req, res) => {
+      const request = req.body;
+      const result = await withdrawCollection.insertOne(request);
+      res.send(result);
+    });
+
+    app.patch('/withdrawUser-decrease', async (req, res) => {
+      const email = req.query.email;
+      const qurey = { email: email };
+      const coins = req.body.withdraw_coin;
+      const updateDec = {
+        $inc: {
+          coin: -coins,
+        },
+      };
+      const result = await userCollcation.updateOne(qurey, updateDec);
+      res.send(result);
+    });
+
+    app.get('/approve-tasksAll', async (req, res) => {
+      const email = req.query.email;
+      const qureys = { creator_email: email, status: 'approve' };
+      const payment = await submitCollcation.find(qureys).toArray();
+      const result = payment.reduce(
+        (workers, items) => workers + parseFloat(items.payable_amount),
+        0
+      );
+
+      res.send({ result });
     });
 
     //------admim section crate api------------------
@@ -321,8 +355,30 @@ async function run() {
 
     app.get('/admin-status', async (req, res) => {
       const tottalUers = await userCollcation.estimatedDocumentCount();
-      res.send({ tottalUers });
+      const totalCoins = await userCollcation.find().toArray();
+      const totals = totalCoins.reduce((total, item) => total + item?.coin, 0);
+
+      const qurey = { status: 'approve' };
+      const totalPayments = await submitCollcation.find(qurey).toArray();
+      const payments = totalPayments.reduce(
+        (pay, items) => pay + parseFloat(items?.payable_amount),
+        0
+      );
+      res.send({ tottalUers, totals, payments });
     });
+
+    app.get('/success-payments', async (req, res) => {
+      const result = await withdrawCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.delete('/withdraw-deletes/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const withdraw = await withdrawCollection.deleteOne(qurey);
+      res.send(withdraw);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 

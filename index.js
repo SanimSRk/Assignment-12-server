@@ -33,6 +33,7 @@ async function run() {
     const buyCartCollection = MicroTask.collection('buyCart');
     const paymentCollection = MicroTask.collection('payments');
     const withdrawCollection = MicroTask.collection('withdraw_request');
+    const testimonialCollection = MicroTask.collection('testimonial');
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -90,7 +91,7 @@ async function run() {
       const qurey = { creator_email: email };
       const result = await tasksCollcation
         .find(qurey)
-        .sort({ completion_date: 1 })
+        .sort({ completion_date: -1 })
         .toArray();
       res.send(result);
     });
@@ -225,6 +226,32 @@ async function run() {
       res.send(result);
     });
 
+    app.get('/top-six', async (req, res) => {
+      const role = { role: 'worker' };
+      const result = await userCollcation
+        .find(role)
+        .sort({ coin: -1 })
+        .limit(6)
+        .toArray();
+
+      res.send(result);
+    });
+
+    app.get('/tasks-counts', async (req, res) => {
+      const email = req.query.email;
+      const qurey = {
+        worker_email: email,
+        status: 'approve',
+      };
+
+      const counts = await submitCollcation.find(qurey).toArray();
+      res.send(counts);
+    });
+
+    app.get('/testimonials-users', async (req, res) => {
+      const result = await testimonialCollection.find().toArray();
+      res.send(result);
+    });
     //----------- worker data api section ----------------
     app.get('/tasks-list', async (req, res) => {
       const result = await tasksCollcation

@@ -36,12 +36,31 @@ async function run() {
     const testimonialCollection = MicroTask.collection('testimonial');
     app.post('/jwt', async (req, res) => {
       const user = req.body;
+      console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '1d',
       });
 
       res.send({ token });
     });
+
+    //verfiy token-------------
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'forbidden acces' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
+        if (err) {
+          console.log(err, token);
+          return res.status(401).send({ message: 'forbidden access' });
+        }
+
+        req.decode = decode;
+
+        next();
+      });
+    };
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -56,7 +75,7 @@ async function run() {
       }
     });
 
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyToken, async (req, res) => {
       const email = req.query.email;
       const qurey = { email: email };
       const result = await userCollcation.findOne(qurey);

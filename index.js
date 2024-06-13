@@ -34,6 +34,8 @@ async function run() {
     const paymentCollection = MicroTask.collection('payments');
     const withdrawCollection = MicroTask.collection('withdraw_request');
     const testimonialCollection = MicroTask.collection('testimonial');
+    const notificationCollection = MicroTask.collection('notificationDB');
+
     app.post('/jwt', async (req, res) => {
       const user = req.body;
       console.log(user);
@@ -92,7 +94,60 @@ async function run() {
       }
       next();
     };
+    //notifaction collection section data
+    app.post(
+      '/withdrawNotification',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const message = req.body;
+        const result = await notificationCollection.insertOne(message);
+        res.send(result);
+      }
+    );
+    app.post(
+      '/userRole-updates',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const message = req.body;
+        const result = await notificationCollection.insertOne(message);
+        res.send(result);
+      }
+    );
 
+    app.post(
+      '/creatoReviewTasks',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const message = req.body;
+        const result = await notificationCollection.insertOne(message);
+        res.send(result);
+      }
+    );
+    app.post(
+      '/rejectTasks-reject',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const message = req.body;
+        const result = await notificationCollection.insertOne(message);
+        res.send(result);
+      }
+    );
+    app.post(
+      '/taskSubmited-user',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const message = req.body;
+        const result = await notificationCollection.insertOne(message);
+        res.send(result);
+      }
+    );
+
+    //task collection section api
     app.post('/users', async (req, res) => {
       const user = req.body;
       const qurey = { email: user?.email };
@@ -385,7 +440,6 @@ async function run() {
       const email = req.query?.worker_email;
       const pages = parseInt(req.query.page);
       const size = parseInt(req.query.size);
-      console.log(pages, size);
       const qurey = { worker_email: email };
       const result = await submitCollcation
         .find(qurey)

@@ -8,7 +8,15 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'https://assignment-12-8b8a8.web.app',
+      'https://assignment-12-8b8a8.firebaseapp.com',
+    ],
+  })
+);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mqe77mp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 

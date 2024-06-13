@@ -383,8 +383,15 @@ async function run() {
 
     app.get('/my-submission', verifyToken, verifyWorkers, async (req, res) => {
       const email = req.query?.worker_email;
+      const pages = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      console.log(pages, size);
       const qurey = { worker_email: email };
-      const result = await submitCollcation.find(qurey).toArray();
+      const result = await submitCollcation
+        .find(qurey)
+        .skip(pages * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
@@ -457,6 +464,13 @@ async function run() {
         res.send(result);
       }
     );
+
+    app.get('/submentCount', verifyToken, verifyWorkers, async (req, res) => {
+      const email = req.query.email;
+      const qurey = { worker_email: email };
+      const result = await submitCollcation.find(qurey).toArray();
+      res.send(result);
+    });
 
     //------admim section crate api------------------
     app.get('/worker-users', verifyToken, verifyAdmin, async (req, res) => {

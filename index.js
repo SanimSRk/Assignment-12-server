@@ -146,7 +146,15 @@ async function run() {
         res.send(result);
       }
     );
-
+    app.get('/notifaction-shows', verifyToken, async (req, res) => {
+      const email = req.query.email;
+      const qurey = { toEmail: email };
+      const result = await notificationCollection
+        .find(qurey)
+        .sort({ time: -1 })
+        .toArray();
+      res.send(result);
+    });
     //task collection section api
     app.post('/users', async (req, res) => {
       const user = req.body;

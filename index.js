@@ -52,7 +52,6 @@ async function run() {
       const token = req.headers.authorization.split(' ')[1];
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
         if (err) {
-          console.log(err, token);
           return res.status(401).send({ message: 'forbidden access' });
         }
 
@@ -60,6 +59,38 @@ async function run() {
 
         next();
       });
+    };
+    const verifyAdmin = async (req, res, next) => {
+      const email = req?.decode?.email;
+      const qurey = { email: email, role: 'isAdmin' };
+      const isAdmin = await userCollcation.findOne(qurey);
+
+      if (!isAdmin) {
+        return res.status(401).send({ message: 'forbidden access' });
+      }
+
+      next();
+    };
+    const verifyWorkers = async (req, res, next) => {
+      const email = req?.decode?.email;
+      const qurey = { email: email, role: 'worker' };
+      const isWorkers = await userCollcation.findOne(qurey);
+
+      if (!isWorkers) {
+        return res.status(401).send({ message: 'forbidden access' });
+      }
+
+      next();
+    };
+    const verifyTaskCreator = async (req, res, next) => {
+      const email = req?.decode?.email;
+      const qurey = { email: email, role: 'taskCreator' };
+      const isTaskCreator = await userCollcation.findOne(qurey);
+      console.log(isTaskCreator);
+      if (!isTaskCreator) {
+        return res.status(401).send({ message: 'forbidden access' });
+      }
+      next();
     };
 
     app.post('/users', async (req, res) => {
@@ -83,7 +114,7 @@ async function run() {
     });
 
     //tasks creator section
-    app.post('/alltasks', async (req, res) => {
+    app.post('/alltasks', verifyToken, verifyTaskCreator, async (req, res) => {
       const task = req.body;
       const email = { email: task?.creator_email };
 
@@ -105,7 +136,7 @@ async function run() {
       }
     });
 
-    app.get('/my-tasks', async (req, res) => {
+    app.get('/my-tasks', verifyToken, verifyTaskCreator, async (req, res) => {
       const email = req.query.creator_email;
       const qurey = { creator_email: email };
       const result = await tasksCollcation
@@ -121,7 +152,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/buyCart', async (req, res) => {
+    app.get('/buyCart', verifyToken, verifyTaskCreator, async (req, res) => {
       const result = await buyCartCollection.find().toArray();
       res.send(result);
     });
@@ -131,12 +162,17 @@ async function run() {
       const result = await buyCartCollection.findOne(qurey);
       res.send(result);
     });
-    app.delete('/tasks-delete/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const result = await tasksCollcation.deleteOne(qurey);
-      res.send(result);
-    });
+    app.delete(
+      '/tasks-delete/:id',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const result = await tasksCollcation.deleteOne(qurey);
+        res.send(result);
+      }
+    );
 
     app.get('/updateTasks/:id', async (req, res) => {
       const id = req.params.id;
@@ -145,47 +181,57 @@ async function run() {
       res.send(result);
     });
 
-    app.put('/tasks-updates/:id', async (req, res) => {
-      const id = req.params.id;
-      const update = req.body;
-      const qurey = { _id: new ObjectId(id) };
-      const updateDec = {
-        $set: {
-          task_title: update?.task_title,
-          task_detail: update?.task_detail,
-          submission_info: update?.submission_info,
-        },
-      };
+    app.put(
+      '/tasks-updates/:id',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const id = req.params.id;
+        const update = req.body;
+        const qurey = { _id: new ObjectId(id) };
+        const updateDec = {
+          $set: {
+            task_title: update?.task_title,
+            task_detail: update?.task_detail,
+            submission_info: update?.submission_info,
+          },
+        };
 
-      const result = await tasksCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
-    //create-payment-intent
-    app.post('/create-payment-intent', async (req, res) => {
-      const price = req.body.price;
-      const priceInSent = parseFloat(price) * 100;
-      if (!price || priceInSent < 1) {
-        return;
+        const result = await tasksCollcation.updateOne(qurey, updateDec);
+        res.send(result);
       }
+    );
+    //create-payment-intent
+    app.post(
+      '/create-payment-intent',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const price = req.body.price;
+        const priceInSent = parseFloat(price) * 100;
+        if (!price || priceInSent < 1) {
+          return;
+        }
 
-      const { client_secret } = await stripe.paymentIntents.create({
-        amount: priceInSent,
-        currency: 'usd',
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
+        const { client_secret } = await stripe.paymentIntents.create({
+          amount: priceInSent,
+          currency: 'usd',
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        });
 
-      res.send({ clientSecret: client_secret });
-    });
+        res.send({ clientSecret: client_secret });
+      }
+    );
 
-    app.post('/payments', async (req, res) => {
+    app.post('/payments', verifyToken, verifyTaskCreator, async (req, res) => {
       const payment = req.body;
       const result = await paymentCollection.insertOne(payment);
       res.send(result);
     });
 
-    app.patch('/increase', async (req, res) => {
+    app.patch('/increase', verifyToken, verifyTaskCreator, async (req, res) => {
       const email = req.query.email;
       const qurey = { email: email };
       const coin = req.body.coin;
@@ -196,54 +242,79 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/payment-history', async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const result = await paymentCollection.find(query).toArray();
-      res.send(result);
-    });
+    app.get(
+      '/payment-history',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await paymentCollection.find(query).toArray();
+        res.send(result);
+      }
+    );
 
-    app.get('/submit-reviews', async (req, res) => {
-      const email = req.query.creator_email;
-      const qureys = { creator_email: email, status: 'pending' };
-      const result = await submitCollcation.find(qureys).toArray();
-      res.send(result);
-    });
+    app.get(
+      '/submit-reviews',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const email = req.query.creator_email;
+        const qureys = { creator_email: email, status: 'pending' };
+        const result = await submitCollcation.find(qureys).toArray();
+        res.send(result);
+      }
+    );
 
-    app.patch('/status-approve/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const updateDec = {
-        $set: {
-          status: 'approve',
-        },
-      };
+    app.patch(
+      '/status-approve/:id',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const updateDec = {
+          $set: {
+            status: 'approve',
+          },
+        };
 
-      const result = await submitCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
+        const result = await submitCollcation.updateOne(qurey, updateDec);
+        res.send(result);
+      }
+    );
 
-    app.patch('/increase-userCoin', async (req, res) => {
-      const email = req.query.worker_email;
-      const amounts = parseFloat(req.body.amount);
-      const qurey = { email: email };
-      const updateDec = {
-        $inc: { coin: +amounts },
-      };
+    app.patch(
+      '/increase-userCoin',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const email = req.query.worker_email;
+        const amounts = parseFloat(req.body.amount);
+        const qurey = { email: email };
+        const updateDec = {
+          $inc: { coin: +amounts },
+        };
 
-      const result = await userCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
+        const result = await userCollcation.updateOne(qurey, updateDec);
+        res.send(result);
+      }
+    );
 
-    app.patch('/reject-userTasks/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const updateDec = {
-        $set: { status: 'reject' },
-      };
-      const result = await submitCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
+    app.patch(
+      '/reject-userTasks/:id',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const updateDec = {
+          $set: { status: 'reject' },
+        };
+        const result = await submitCollcation.updateOne(qurey, updateDec);
+        res.send(result);
+      }
+    );
 
     app.get('/top-six', async (req, res) => {
       const role = { role: 'worker' };
@@ -271,8 +342,26 @@ async function run() {
       const result = await testimonialCollection.find().toArray();
       res.send(result);
     });
+
+    app.get(
+      '/approve-tasksAll',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const email = req.query.email;
+        const qureys = { creator_email: email, status: 'approve' };
+        const payment = await submitCollcation.find(qureys).toArray();
+        const result = payment.reduce(
+          (workers, items) => workers + parseFloat(items.payable_amount),
+          0
+        );
+
+        res.send({ result });
+      }
+    );
+
     //----------- worker data api section ----------------
-    app.get('/tasks-list', async (req, res) => {
+    app.get('/tasks-list', verifyToken, verifyWorkers, async (req, res) => {
       const result = await tasksCollcation
         .find({ task_quantity: { $gt: 0 } })
         .toArray();
@@ -286,86 +375,97 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/tasks-submit', async (req, res) => {
+    app.post('/tasks-submit', verifyToken, verifyWorkers, async (req, res) => {
       const submit = req.body;
       const result = await submitCollcation.insertOne(submit);
       res.send(result);
     });
 
-    app.get('/my-submission', async (req, res) => {
+    app.get('/my-submission', verifyToken, verifyWorkers, async (req, res) => {
       const email = req.query?.worker_email;
       const qurey = { worker_email: email };
       const result = await submitCollcation.find(qurey).toArray();
       res.send(result);
     });
 
-    app.get('/worker-users', async (req, res) => {
+    app.get(
+      '/worker-allSubmicon',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const email = req.query.worker_email;
+        const qurey = { worker_email: email };
+        const workerSubmit = await submitCollcation.find(qurey).toArray();
+        res.send(workerSubmit);
+      }
+    );
+
+    app.get(
+      '/workers-amounts',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const email = req.query.worker_email;
+        const qureyAmounts = { worker_email: email, status: 'approve' };
+        const amounts = await submitCollcation.find(qureyAmounts).toArray();
+        res.send(amounts);
+      }
+    );
+
+    app.patch(
+      '/drcress-quantity/:id',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const updateDec = {
+          $inc: {
+            task_quantity: -1,
+          },
+        };
+        const result = await tasksCollcation.updateOne(qurey, updateDec);
+        res.send(result);
+      }
+    );
+
+    app.post(
+      '/withdraw-requests',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const request = req.body;
+        const result = await withdrawCollection.insertOne(request);
+        res.send(result);
+      }
+    );
+
+    app.patch(
+      '/withdrawUser-decrease',
+      verifyToken,
+      verifyWorkers,
+      async (req, res) => {
+        const email = req.query.email;
+        const qurey = { email: email };
+        const coins = req.body.withdraw_coin;
+        const updateDec = {
+          $inc: {
+            coin: -coins,
+          },
+        };
+        const result = await userCollcation.updateOne(qurey, updateDec);
+        res.send(result);
+      }
+    );
+
+    //------admim section crate api------------------
+    app.get('/worker-users', verifyToken, verifyAdmin, async (req, res) => {
       const role = { role: 'worker' };
       const result = await userCollcation.find(role).toArray();
 
       res.send(result);
     });
-
-    app.get('/worker-allSubmicon', async (req, res) => {
-      const email = req.query.worker_email;
-      const qurey = { worker_email: email };
-      const workerSubmit = await submitCollcation.find(qurey).toArray();
-      res.send(workerSubmit);
-    });
-
-    app.get('/workers-amounts', async (req, res) => {
-      const email = req.query.worker_email;
-      const qureyAmounts = { worker_email: email, status: 'approve' };
-      const amounts = await submitCollcation.find(qureyAmounts).toArray();
-      res.send(amounts);
-    });
-
-    app.patch('/drcress-quantity/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const updateDec = {
-        $inc: {
-          task_quantity: -1,
-        },
-      };
-      const result = await tasksCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
-
-    app.post('/withdraw-requests', async (req, res) => {
-      const request = req.body;
-      const result = await withdrawCollection.insertOne(request);
-      res.send(result);
-    });
-
-    app.patch('/withdrawUser-decrease', async (req, res) => {
-      const email = req.query.email;
-      const qurey = { email: email };
-      const coins = req.body.withdraw_coin;
-      const updateDec = {
-        $inc: {
-          coin: -coins,
-        },
-      };
-      const result = await userCollcation.updateOne(qurey, updateDec);
-      res.send(result);
-    });
-
-    app.get('/approve-tasksAll', async (req, res) => {
-      const email = req.query.email;
-      const qureys = { creator_email: email, status: 'approve' };
-      const payment = await submitCollcation.find(qureys).toArray();
-      const result = payment.reduce(
-        (workers, items) => workers + parseFloat(items.payable_amount),
-        0
-      );
-
-      res.send({ result });
-    });
-
-    //------admim section crate api------------------
-
-    app.patch('/user-role/:id', async (req, res) => {
+    app.patch('/user-role/:id', verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const qurey = { _id: new ObjectId(id) };
 
@@ -381,25 +481,35 @@ async function run() {
       res.send(result);
     });
 
-    app.delete('/delete-user/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const result = await userCollcation.deleteOne(qurey);
-      res.send(result);
-    });
+    app.delete(
+      '/delete-user/:id',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const result = await userCollcation.deleteOne(qurey);
+        res.send(result);
+      }
+    );
 
-    app.get('/tasks-manages', async (req, res) => {
+    app.get('/tasks-manages', verifyToken, verifyAdmin, async (req, res) => {
       const result = await tasksCollcation.find().toArray();
       res.send(result);
     });
-    app.delete('/task-deletes/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const result = await tasksCollcation.deleteOne(qurey);
-      res.send(result);
-    });
+    app.delete(
+      '/task-deletes/:id',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const result = await tasksCollcation.deleteOne(qurey);
+        res.send(result);
+      }
+    );
 
-    app.get('/admin-status', async (req, res) => {
+    app.get('/admin-status', verifyToken, verifyAdmin, async (req, res) => {
       const tottalUers = await userCollcation.estimatedDocumentCount();
       const totalCoins = await userCollcation.find().toArray();
       const totals = totalCoins.reduce((total, item) => total + item?.coin, 0);
@@ -413,17 +523,22 @@ async function run() {
       res.send({ tottalUers, totals, payments });
     });
 
-    app.get('/success-payments', async (req, res) => {
+    app.get('/success-payments', verifyToken, verifyAdmin, async (req, res) => {
       const result = await withdrawCollection.find().toArray();
       res.send(result);
     });
 
-    app.delete('/withdraw-deletes/:id', async (req, res) => {
-      const id = req.params.id;
-      const qurey = { _id: new ObjectId(id) };
-      const withdraw = await withdrawCollection.deleteOne(qurey);
-      res.send(withdraw);
-    });
+    app.delete(
+      '/withdraw-deletes/:id',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const withdraw = await withdrawCollection.deleteOne(qurey);
+        res.send(withdraw);
+      }
+    );
 
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });

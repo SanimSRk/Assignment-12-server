@@ -46,7 +46,7 @@ async function run() {
 
     app.post('/jwt', async (req, res) => {
       const user = req.body;
-      console.log(user);
+
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '1d',
       });
@@ -96,7 +96,7 @@ async function run() {
       const email = req?.decode?.email;
       const qurey = { email: email, role: 'taskCreator' };
       const isTaskCreator = await userCollcation.findOne(qurey);
-      console.log(isTaskCreator);
+
       if (!isTaskCreator) {
         return res.status(401).send({ message: 'forbidden access' });
       }
@@ -430,7 +430,29 @@ async function run() {
         res.send({ result });
       }
     );
+    app.get('/tasksSubmits-modal/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await submitCollcation.findOne(qurey);
+      console.log(result);
+      res.send(result);
+    });
 
+    app.patch(
+      '/updateTasks-quntity/:id',
+      verifyToken,
+      verifyTaskCreator,
+      async (req, res) => {
+        const id = req.params.id;
+        const qurey = { _id: new ObjectId(id) };
+        const updateDec = {
+          $inc: { task_quantity: +1 },
+        };
+        const result = await tasksCollcation.updateOne(qurey, updateDec);
+        console.log(result);
+        res.send(result);
+      }
+    );
     //----------- worker data api section ----------------
     app.get('/tasks-list', verifyToken, verifyWorkers, async (req, res) => {
       const result = await tasksCollcation
@@ -624,6 +646,28 @@ async function run() {
       }
     );
 
+    app.get('/tasksDeatils-modal/:id', async (req, res) => {
+      const id = req.params.id;
+      const qurey = { _id: new ObjectId(id) };
+      const result = await tasksCollcation.findOne(qurey);
+      res.send(result);
+    });
+
+    app.patch('/tsksCreator-tokenUpdate', verifyToken, async (req, res) => {
+      const email = req.query.email;
+      const qurey = { email: email };
+      const quantity = req?.body.quantity;
+      const amount = req.body?.amount;
+
+      const finaleResult = parseInt(quantity) * parseFloat(amount);
+
+      const updateDec = {
+        $inc: { coin: +finaleResult },
+      };
+      const result = await userCollcation.updateOne(qurey, updateDec);
+
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 });
 
